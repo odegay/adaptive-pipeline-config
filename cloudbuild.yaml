@@ -4,6 +4,6 @@ steps:
   args: ['install', '-r', 'requirements.txt']
   
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'main', 
+  args: ['functions', 'deploy', 'adatptive_pipeline_generate_config', 
          '--runtime', 'python39',
          '--trigger-topic','adaptive-pipeline-workflow-topic'] 

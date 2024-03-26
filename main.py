@@ -30,7 +30,7 @@ def publish_to_pubsub(data):
     future = publisher.publish(topic_path, data)
     print(future.result()) 
 
-def main(event, context):    
+def adatptive_pipeline_generate_config(event, context):    
     """Triggered by a change to a Cloud Storage bucket."""
     # Fetch Project ID from Metadata Server
     metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
