@@ -32,6 +32,10 @@ def publish_to_pubsub(data):
 
 def main(event, context):    
     """Triggered by a change to a Cloud Storage bucket."""
+    # Fetch Project ID from Metadata Server
+    metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
+    headers = {"Metadata-Flavor": "Google"}
+    project_id = requests.get(metadata_server_url, headers=headers).text
     
     # Call your helper functions
     helper_function_1()
@@ -42,6 +46,8 @@ def main(event, context):
         "status": "success",  # Example, replace with your relevant data
         # ... add more data if needed 
     }
-
+    topic_name = "abrakadabra"
     # Publish the message to Pub/Sub
-    publish_to_pubsub(message_data) 
+      # Publish the message to Pub/Sub (with dynamic project_id)
+    publisher = pubsub_v1.PublisherClient()
+    topic_path = publisher.topic_path(project_id, topic_name)
