@@ -1,9 +1,4 @@
 steps:
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['functions', 'deploy', 'publishMessage', 
-           '--runtime', 'python39', 
-           '--trigger-topic', '$$TOPIC_NAME', 
-           '--set-env-vars', 'PROJECT_ID=$$PROJECT_ID']
-substitutions:
-  _PROJECT_ID: 
-  _TOPIC_NAME:
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'publishMessage', 
+         '--runtime', 'python39'] 
