@@ -7,7 +7,6 @@
 **Key Technologies:**
 *   Python
 *   JSON
-*   (Potentially) Jinja2 (if using templating)
 *   GCP Cloud Functions (if deploying as functions)
 
 **Getting Started**
