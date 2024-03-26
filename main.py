@@ -52,3 +52,4 @@ def adatptive_pipeline_generate_config(event, context):
       # Publish the message to Pub/Sub (with dynamic project_id)
     publisher = pubsub_v1.PublisherClient()
     topic_path = publisher.topic_path(project_id, topic_name)
+    print(f"Publishing message to {topic_path} and project_id {project_id}")
