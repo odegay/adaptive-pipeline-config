@@ -1,14 +1,4 @@
 steps:
-  - name: 'python' 
-    entrypoint: 'python'
-    args: 
-      - '-c'
-      - 'import os; print(os.path.abspath("secret_utils.py"))'
-
-  - name: 'python' 
-    entrypoint: 'python'
-    args: ['secret_utils.py', 'adaptive-pipeline-project-name', 'adaptive-pipeline-workflow-topic'] 
-
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['functions', 'deploy', 'publishMessage', 
            '--runtime', 'python39', 
