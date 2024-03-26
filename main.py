@@ -46,7 +46,7 @@ def adatptive_pipeline_generate_config(event, context):
         "status": "success",  # Example, replace with your relevant data
         # ... add more data if needed 
     }
-    topic_name = "abrakadabra"
+    topic_name = "adaptive-pipeline-workflow-topic"
     # Publish the message to Pub/Sub
       # Publish the message to Pub/Sub (with dynamic project_id)
     publisher = pubsub_v1.PublisherClient()
