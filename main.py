@@ -2,6 +2,7 @@ import base64
 import os
 import json
 from google.cloud import pubsub_v1
+import requests
 
 # Replace with your Google Cloud project ID
 project_id = os.environ.get('PROJECT_ID')
