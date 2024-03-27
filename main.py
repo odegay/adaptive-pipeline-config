@@ -4,52 +4,63 @@ import json
 from google.cloud import pubsub_v1
 import requests
 
-# Replace with your Google Cloud project ID
-project_id = os.environ.get('PROJECT_ID')
-# Replace with the desired Pub/Sub topic name 
-topic_name = os.environ.get('TOPIC_NAME')
-
 # Stub helper functions
 def helper_function_1():
     # Replace with your helper function's logic
     print("Helper function 1 executed")
-
 def helper_function_2():
     # Replace with your helper function's logic
     print("Helper function 2 executed")
-
-def publish_to_pubsub(data):
+def publish_to_pubsub(topic_name, project_id, data):
     """Publishes a message to a Google Cloud Pub/Sub topic."""
-
-    publisher = pubsub_v1.PublisherClient()
-    topic_path = publisher.topic_path(project_id, topic_name)
-
-    # Data must be a bytestring
-    data = json.dumps(data).encode("utf-8")
-
-    # Publish the message, the result is a future that provides details on the delivery
-    future = publisher.publish(topic_path, data)
-    print(future.result()) 
-
-def adatptive_pipeline_generate_config(event, context):    
-    """Triggered by a change to a Cloud Storage bucket."""
-    # Fetch Project ID from Metadata Server
-    metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
-    headers = {"Metadata-Flavor": "Google"}
-    project_id = requests.get(metadata_server_url, headers=headers).text
-    
-    # Call your helper functions
-    helper_function_1()
-    helper_function_2()
-
-    # Construct the message to be published 
-    message_data = {
-        "status": "success",  # Example, replace with your relevant data
-        # ... add more data if needed 
-    }
-    topic_name = "adaptive-pipeline-workflow-topic"
     # Publish the message to Pub/Sub
       # Publish the message to Pub/Sub (with dynamic project_id)
     publisher = pubsub_v1.PublisherClient()
     topic_path = publisher.topic_path(project_id, topic_name)
-    print(f"Publishing message to {topic_path} and project_id {project_id}")
+    data = json.dumps(data).encode("utf-8")
+    future = publisher.publish(topic_path, data)
+    print(future.result()) 
+    # Data must be a bytestring
+    # Publish the message, the result is a future that provides details on the delivery
+
+def validate_message(event, context):
+    """Background Cloud Function to be triggered by Pub/Sub.
+    Args:
+         event (dict):  The dictionary with data specific to this type of event.
+         context (google.cloud.functions.Context): Metadata of triggering event.
+    """
+    # Decode the PubSub message
+    pubsub_message = base64.b64decode(event['data']).decode('utf-8')
+    print(pubsub_message)
+    # Validate the message
+    if 'data' in event:
+        if 'start procedure' in pubsub_message:
+            print('Starting a new procedure')
+            return True
+        else:
+            print('Not a start procedure message')
+            return False
+    else:
+        return False
+
+def adatptive_pipeline_generate_config(event, context):    
+    """Triggered by a change to a Cloud Storage bucket."""
+    # Fetch Project ID from Metadata Server
+    if (validate_message):
+        metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
+        headers = {"Metadata-Flavor": "Google"}
+        project_id = requests.get(metadata_server_url, headers=headers).text    
+        # Call your helper functions
+        helper_function_1()
+        helper_function_2()
+        # Construct the message to be published 
+        message_data = {
+            "status": "success",  # Example, replace with your relevant data
+            # ... add more data if needed 
+        }
+        topic_name = "adaptive-pipeline-workflow-topic"
+        publish_to_pubsub(topic_name, project_id, message_data)
+        print(f"Successfully published a message to {topic_name} and project_id {project_id}")
+    else:
+        print("Skipping message processing due to a message not intended to start a procedure")
+        return "Skipping message processing due to a message not intended to start a procedure"
