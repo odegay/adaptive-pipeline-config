@@ -46,7 +46,7 @@ def validate_message(event, context):
 def adatptive_pipeline_generate_config(event, context):    
     """Triggered by a change to a Cloud Storage bucket."""
     # Fetch Project ID from Metadata Server
-    if (validate_message):
+    if (validate_message  == True):
         metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
         headers = {"Metadata-Flavor": "Google"}
         project_id = requests.get(metadata_server_url, headers=headers).text    
