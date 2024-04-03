@@ -3,6 +3,10 @@ import os
 import json
 from google.cloud import pubsub_v1
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 # Stub helper functions
 def helper_function_1():
@@ -31,6 +35,7 @@ def validate_message(event, context):
     """
     # Decode the PubSub message
     pubsub_message = base64.b64decode(event['data']).decode('utf-8')
+    logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")  
     print(pubsub_message)
     # Validate the message
     if 'data' in event:
@@ -61,6 +66,7 @@ def adatptive_pipeline_generate_config(event, context):
         topic_name = "adaptive-pipeline-workflow-topic"
         publish_to_pubsub(topic_name, project_id, message_data)
         print(f"Successfully published a message to {topic_name} and project_id {project_id}")
+        return f"Successfully published a message to {topic_name} and project_id {project_id}"
     else:
         print("Skipping message processing due to a message not intended to start a procedure")
         return "Skipping message processing due to a message not intended to start a procedure"
