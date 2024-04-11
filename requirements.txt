@@ -1,1 +1,3 @@
 google-cloud-pubsub
+adpipwfwconst==0.1.3
+adpipsvcfuncs==0.1.3
