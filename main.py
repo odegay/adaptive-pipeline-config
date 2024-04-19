@@ -43,10 +43,10 @@ def validate_message(event, context):
     # Validate the message
     if 'data' in event:
         if 'start procedure' in pubsub_message:
-            print('Starting a new procedure')
+            logger.debug("Start procedure message received")
             return True
         else:
-            print('Not a start procedure message')
+            logger.debug("Message not intended to start a procedure")
             return False
     else:
         return False
@@ -55,9 +55,9 @@ def adatptive_pipeline_generate_config(event, context):
     """Triggered by a change to a Cloud Storage bucket."""
     # Fetch Project ID from Metadata Server
     if (validate_message(event, context) == True):
-        metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
-        headers = {"Metadata-Flavor": "Google"}
-        project_id = requests.get(metadata_server_url, headers=headers).text    
+        # metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
+        # headers = {"Metadata-Flavor": "Google"}
+        # project_id = requests.get(metadata_server_url, headers=headers).text    
         # Call your helper functions
         helper_function_1()
         helper_function_2()
@@ -68,8 +68,8 @@ def adatptive_pipeline_generate_config(event, context):
         }
         topic_name = "adaptive-pipeline-workflow-topic"
         publish_to_pubsub(topic_name, message_data)
-        print(f"Successfully published a message to {topic_name} and project_id {project_id}")
-        return f"Successfully published a message to {topic_name} and project_id {project_id}"
+        logger.debug(f"Published message to topic: {topic_name} with data: {message_data} configuration generated")
+        return f"Successfully published a message to {topic_name} with data: {message_data} configuration generated")
     else:
-        print("Skipping message processing due to a message not intended to start a procedure")
+        logger.debug("Skipping message processing due to a message not intended to start a procedure")
         return "Skipping message processing due to a message not intended to start a procedure"
