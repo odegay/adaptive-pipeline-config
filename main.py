@@ -69,7 +69,7 @@ def adatptive_pipeline_generate_config(event, context):
         topic_name = "adaptive-pipeline-workflow-topic"
         publish_to_pubsub(topic_name, message_data)
         logger.debug(f"Published message to topic: {topic_name} with data: {message_data} configuration generated")
-        return f"Successfully published a message to {topic_name} with data: {message_data} configuration generated")
+        return f"Successfully published a message to {topic_name} with data: {message_data} configuration generated"
     else:
         logger.debug("Skipping message processing due to a message not intended to start a procedure")
         return "Skipping message processing due to a message not intended to start a procedure"
