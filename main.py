@@ -8,6 +8,18 @@ from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
 import logging
 
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
+if not root_logger.handlers:
+    # Create console handler and set its log level to DEBUG
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    # Create formatter and add it to the handler
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    # Add the handler to the root logger
+    root_logger.addHandler(ch)
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 
