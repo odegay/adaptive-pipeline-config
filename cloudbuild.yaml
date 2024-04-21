@@ -6,4 +6,4 @@ steps:
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'adatptive_pipeline_generate_config', 
          '--runtime', 'python39',
-         '--trigger-topic','adaptive-pipeline-workflow-topic'] 
+         '--trigger-topic','adaptive-pipeline-config-topic'] 
