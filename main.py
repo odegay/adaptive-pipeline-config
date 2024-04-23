@@ -23,60 +23,71 @@ if not root_logger.handlers:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-# Stub helper functions
-def helper_function_1():
-    # Replace with your helper function's logic
-    print("Helper function 1 executed")
-def helper_function_2():
-    # Replace with your helper function's logic
-    print("Helper function 2 executed")
-# def publish_to_pubsub(topic_name, project_id, data):
-#     """Publishes a message to a Google Cloud Pub/Sub topic."""
-#     # Publish the message to Pub/Sub
-#       # Publish the message to Pub/Sub (with dynamic project_id)
-#     publisher = pubsub_v1.PublisherClient()
-#     topic_path = publisher.topic_path(project_id, topic_name)
-#     data = json.dumps(data).encode("utf-8")
-#     future = publisher.publish(topic_path, data)
-#     print(future.result()) 
-#     # Data must be a bytestring
-#     # Publish the message, the result is a future that provides details on the delivery
+def load_previous_model_configurations():
+    #TODO: Implement the logic to load previous model configurations
 
-def validate_message(event, context):
-    """Background Cloud Function to be triggered by Pub/Sub.
-    Args:
-         event (dict):  The dictionary with data specific to this type of event.
-         context (google.cloud.functions.Context): Metadata of triggering event.
+    json_string_config = """
+    {
+    "layers": [
+        {"layer_type":"dense", "units":96, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "activation":"relu", "kernel_regularizer_lambda":0.001},
+        {"layer_type":"dense", "units":64, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "dropout_rate":0.4, "activation":"relu", "kernel_regularizer_lambda":0.001},
+        {"layer_type":"dense", "units":32, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "dropout_rate":0.4, "activation":"relu", "kernel_regularizer_lambda":0.001},
+        {"layer_type":"dense", "units":16, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "activation":"relu", "kernel_regularizer_lambda":0.001}
+    ]
+    }
     """
-    # Decode the PubSub message
-    pubsub_message = base64.b64decode(event['data']).decode('utf-8')
-    logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")  
-    print(pubsub_message)
-    # Validate the message
-    if 'data' in event:
-        if 'start procedure' in pubsub_message:
-            logger.debug("Start procedure message received")
-            return True
+
+    # Load previous model configurations    
+    logger.debug("Placeholder for loading previous model configurations")
+    return json_string_config
+
+def generate_LLM_prompt():
+    # Opens a prompt.txt located in the same folder file and reads the prompt
+    prompt = ""
+    with open("prompt.txt", "r") as file:
+        prompt = file.read()
+
+    prompt = prompt + " " + load_previous_model_configurations()
+    return prompt
+
+def validate_message(pubsub_message):
+    # Validate the message to start a model configuration
+    # Log the entire message and its type
+    logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")
+    if 'MSG_TYPE' in pubsub_message:        
+        if pubsub_message['MSG_TYPE'] == MSG_TYPE.START_MODEL_CONFIGURATION.value:
+            if 'pipeline_id' in pubsub_message:
+                logger.debug(f"Start model configuration with pipeline_id: {pubsub_message['pipeline_id']} received")
+                return True
+            else:
+                logger.debug("Pipeline ID is missing in the message")
+                return False
         else:
-            logger.debug("Message not intended to start a procedure")
+            logger.debug("Message not intended to start a model configuration")
             return False
     else:
+        logger.debug("Message type is missing in the message")
         return False
 
-def adatptive_pipeline_generate_config(event, context):    
-    """Triggered by a change to a Cloud Storage bucket."""
-    # Fetch Project ID from Metadata Server
-    if (validate_message(event, context) == True):
-        # metadata_server_url = "http://metadata/computeMetadata/v1/project/project-id"
-        # headers = {"Metadata-Flavor": "Google"}
-        # project_id = requests.get(metadata_server_url, headers=headers).text    
-        # Call your helper functions
-        helper_function_1()
-        helper_function_2()
+def adatptive_pipeline_generate_config(event, context):        
+
+    pubsub_message = ""
+    if 'data' in event:
+        pubsub_message = base64.b64decode(event['data']).decode('utf-8')
+        pubsub_message = json.loads(pubsub_message)
+        logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")
+    else:
+        logger.debug("Data is missing in the event")
+        return False
+    
+    
+    if (validate_message(pubsub_message) == True):
+        prompt = generate_LLM_prompt()
         # Construct the message to be published 
         message_data = {
-            "status": "success",  # Example, replace with your relevant data
-            # ... add more data if needed 
+            "pipeline_id": pubsub_message['pipeline_id'],
+            "MSG_TYPE": MSG_TYPE.REQUEST_LLM_NEW_MODEL_CONFIGURATION.value,
+            "prompt": prompt            
         }
         topic_name = "adaptive-pipeline-workflow-topic"
         publish_to_pubsub(topic_name, message_data)
