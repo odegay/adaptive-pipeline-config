@@ -44,7 +44,7 @@ def load_previous_model_configurations():
 def generate_LLM_prompt():
     # Opens a prompt.txt located in the same folder file and reads the prompt
     prompt = ""
-    with open("prompt.txt", "r") as file:
+    with open("prompt_you_are.txt", "r") as file:
         prompt = file.read()
 
     prompt = prompt + " " + load_previous_model_configurations()
