@@ -5,7 +5,7 @@ from adpipsvcfuncs import publish_to_pubsub
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
 import logging
-import promtps
+from promtps import first_prompt, additional_prompt
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -42,9 +42,9 @@ def load_previous_model_configurations():
 
 def generate_LLM_prompt():
     # Opens a prompt.txt located in the same folder file and reads the prompt
-    prompt = promtps.first_prompt
+    prompt = first_prompt
     prompt = prompt + " " + load_previous_model_configurations()
-    prompt = prompt + " " + promtps.additional_prompt
+    prompt = prompt + " " + additional_prompt
     return prompt
 
 def validate_message(pubsub_message):
