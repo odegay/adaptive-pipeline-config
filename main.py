@@ -60,7 +60,7 @@ def validate_message(pubsub_message):
                 logger.debug("Pipeline ID is missing in the message")
                 return False
         else:
-            logger.debug("Message not intended to start a model configuration {pubsub_message['MSG_TYPE']} received")
+            logger.debug(f"Message not intended to start a model configuration {pubsub_message['MSG_TYPE']} received")
             return False
     else:
         logger.debug("Message type is missing in the message")
