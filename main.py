@@ -60,7 +60,7 @@ def validate_message(pubsub_message):
                 logger.debug("Pipeline ID is missing in the message")
                 return False
         else:
-            logger.debug("Message not intended to start a model configuration")
+            logger.debug("Message not intended to start a model configuration {pubsub_message['MSG_TYPE']} received")
             return False
     else:
         logger.debug("Message type is missing in the message")
@@ -86,7 +86,7 @@ def adatptive_pipeline_generate_config(event, context):
             "MSG_TYPE": MSG_TYPE.REQUEST_LLM_NEW_MODEL_CONFIGURATION.value,
             "prompt": prompt            
         }
-        topic_name = "adaptive-pipeline-workflow-topic"
+        topic_name = "adaptive-pipeline-config-topic"
         publish_to_pubsub(topic_name, message_data)
         logger.debug(f"Published message to topic: {topic_name} with data: {message_data} configuration generated")
         return f"Successfully published a message to {topic_name} with data: {message_data} configuration generated"
