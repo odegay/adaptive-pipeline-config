@@ -1,4 +1,5 @@
 google-cloud-pubsub
+google-cloud-secret-manager
 adpipwfwconst==0.1.3
 adpipsvcfuncs==0.1.4
 pandas
