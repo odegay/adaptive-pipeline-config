@@ -51,8 +51,8 @@ def validate_message(pubsub_message):
     # Validate the message to start a model configuration
     # Log the entire message and its type
     logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")
-    if 'MSG_TYPE' in pubsub_message:        
-        if pubsub_message['MSG_TYPE'] == MSG_TYPE.START_MODEL_CONFIGURATION.value:
+    if 'status' in pubsub_message:        
+        if pubsub_message['status'] == MSG_TYPE.START_MODEL_CONFIGURATION.value:
             if 'pipeline_id' in pubsub_message:
                 logger.debug(f"Start model configuration with pipeline_id: {pubsub_message['pipeline_id']} received")
                 return True
@@ -60,7 +60,7 @@ def validate_message(pubsub_message):
                 logger.debug("Pipeline ID is missing in the message")
                 return False
         else:
-            logger.debug(f"Message not intended to start a model configuration {pubsub_message['MSG_TYPE']} received")
+            logger.debug(f"Message not intended to start a model configuration {pubsub_message['status']} received")
             return False
     else:
         logger.debug("Message type is missing in the message")
@@ -83,7 +83,7 @@ def adatptive_pipeline_generate_config(event, context):
         # Construct the message to be published 
         message_data = {
             "pipeline_id": pubsub_message['pipeline_id'],
-            "MSG_TYPE": MSG_TYPE.REQUEST_LLM_NEW_MODEL_CONFIGURATION.value,
+            "status": MSG_TYPE.REQUEST_LLM_NEW_MODEL_CONFIGURATION.value,
             "prompt": prompt            
         }
         topic_name = "adaptive-pipeline-config-topic"
