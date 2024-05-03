@@ -1,10 +1,10 @@
 import base64
 import json
-from google.cloud import pubsub_v1
-from adpipsvcfuncs import publish_to_pubsub
+from adpipsvcfuncs import publish_to_pubsub, fetch_gcp_secret
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
 import logging
+import requests
 from promtps import first_prompt, additional_prompt
 
 root_logger = logging.getLogger()
@@ -21,6 +21,8 @@ if not root_logger.handlers:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
+api_url = fetch_gcp_secret('adaptive-pipeline-persistence-layer-url')
+api_key = fetch_gcp_secret('adaptive-pipeline-API-token')
 
 def load_previous_model_configurations():
     #TODO: Implement the logic to load previous model configurations
@@ -86,6 +88,22 @@ def adatptive_pipeline_generate_config(event, context):
             "status": MSG_TYPE.REQUEST_LLM_NEW_MODEL_CONFIGURATION.value,
             "prompt": prompt            
         }
+
+        if not api_url:
+            logger.error("Failed to fetch the API URL")
+            return None
+        headers = {
+            "Authorization": api_key
+        }
+        try:
+            response = requests.put(f"{api_url}/update/{pubsub_message['pipeline_id']}", json=message_data, headers=headers)
+            if response.status_code != 200:
+                logger.error(f"Failed to update the pipeline status. Response: {response.text}")                
+                return "Failed to update the pipeline status. Error: {response.text}"
+        except Exception as e:
+            logger.error(f"Error: {str(e)}")
+            return "Failed to update the pipeline status. Error: {str(e)}"            
+
         topic_name = "adaptive-pipeline-config-topic"
         publish_to_pubsub(topic_name, message_data)
         logger.debug(f"Published message to topic: {topic_name} with data: {message_data} configuration generated")
