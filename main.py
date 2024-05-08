@@ -70,6 +70,17 @@ def validate_message(pubsub_message):
     else:
         logger.debug("Message type is missing in the message")
         return False
+    
+def send_OpenAI_request(prompt: str) -> str:
+    response = openAI_request(opeanai_api_key, system_prompt, prompt)
+    if response is None:
+        logger.error("Failed to get a response from OpenAI")
+        return None    
+    # Extract the response from OpenAI
+    response_text = response.choices[0].message.content
+    logger.debug(f"OpenAI response: {response}")
+    logger.debug(f"OpenAI response text: {response_text}")
+    return response_text
 
 def adatptive_pipeline_generate_config(event, context):        
 
@@ -80,41 +91,50 @@ def adatptive_pipeline_generate_config(event, context):
         logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")
     else:
         logger.debug("Data is missing in the event")
-        return False
-    
+        return False    
     
     if (validate_message(pubsub_message) == True):
         prompt = generate_LLM_prompt()
-        response = openAI_request(opeanai_api_key, system_prompt, prompt)
-        if response is None:
-            logger.error("Failed to get a response from OpenAI")
-            return "Failed to get a response from OpenAI"
-        
-        # Extract the response from OpenAI
-        response_text = response.choices[0].message.content
-        logger.debug(f"OpenAI response: {response}")
-        logger.debug(f"OpenAI response text: {response_text}")
+        response_text = send_OpenAI_request(prompt)
         response_json = None
         
         for i in range(3):
+            passed = False
             repsonse_json = load_valid_json(response_text)
-            if (repsonse_json is None) or (not jsonschema.validate(repsonse_json, short_ffn_config_schema)):
-                logger.error("Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
+            if (repsonse_json is None):
+                logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
+                prompt = generate_LLM_prompt()
                 prompt += f""" 
                 Make sure to provide a valid JSON configuration.
-                You previously responded with the text below, which was not recognized as a valid JSON: 
+                You previously responded with the text below, it failed to upload as a valid JSON:
                 <<<
                 {response_text}
                 >>>
                 """
-                response = openAI_request(opeanai_api_key, system_prompt, prompt)                
             else:
+                try:
+                    jsonschema.validate(repsonse_json, short_ffn_config_schema)
+                    passed = True
+                except Exception as ve:
+                    passed = False
+                    logger.error(f"Failed to validate the JSON configuration. Error: {ve}")
+                    prompt = generate_LLM_prompt()
+                    prompt += f""" 
+                    Make sure to provide a valid JSON configuration.
+                    You previously responded with the text below, it did not pass the schema validation:
+                    <<<
+                    {response_text}
+                    >>>
+                    """
+            if passed:
                 logger.debug("Successfully loaded a valid JSON from OpenAI response")
-                break 
-        
+                break
+            else:
+                response_text = send_OpenAI_request(prompt)
+
         if i == 2:
-            logger.error(f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON is {response_json}")
-            return f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON is {response_json}"
+            logger.error(f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON text is {response_json}")
+            return f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON text is {response_json}"
 
             
         logger.debug(f"OpenAI response text: {response_text}")
