@@ -89,16 +89,17 @@ def adatptive_pipeline_generate_config(event, context):
         if response is None:
             logger.error("Failed to get a response from OpenAI")
             return "Failed to get a response from OpenAI"
-        logger.debug(f"OpenAI response: {response}")
+        
         # Extract the response from OpenAI
         response_text = response.choices[0].message.content
+        logger.debug(f"OpenAI response: {response}")
+        logger.debug(f"OpenAI response text: {response_text}")
         response_json = None
-
-        attepmpts = 0
+        
         for i in range(3):
             repsonse_json = load_valid_json(response_text)
             if (repsonse_json is None) or (not jsonschema.validate(repsonse_json, short_ffn_config_schema)):
-                logger.error("Failed to load a valid JSON from OpenAI response")
+                logger.error("Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
                 prompt += f""" 
                 Make sure to provide a valid JSON configuration.
                 You previously responded with the text below, which was not recognized as a valid JSON: 
@@ -112,8 +113,8 @@ def adatptive_pipeline_generate_config(event, context):
                 break 
         
         if i == 2:
-            logger.error("Failed to load a valid JSON from OpenAI response after 3 attempts")
-            return "Failed to load a valid JSON from OpenAI response after 3 attempts"        
+            logger.error(f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON is {response_json}")
+            return f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON is {response_json}"
 
             
         logger.debug(f"OpenAI response text: {response_text}")
