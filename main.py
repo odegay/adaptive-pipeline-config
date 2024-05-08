@@ -1,11 +1,13 @@
 import base64
 import json
-from adpipsvcfuncs import publish_to_pubsub, fetch_gcp_secret, openAI_request
+import jsonschema
+from adpipsvcfuncs import publish_to_pubsub, fetch_gcp_secret, openAI_request, load_valid_json
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
 import logging
-import requests
+import requests 
 from promtps import system_prompt, get_first_request_prompt
+from configuration_schemas import short_ffn_config_schema
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -90,8 +92,33 @@ def adatptive_pipeline_generate_config(event, context):
         logger.debug(f"OpenAI response: {response}")
         # Extract the response from OpenAI
         response_text = response.choices[0].message.content
+        response_json = None
+
+        attepmpts = 0
+        for i in range(3):
+            repsonse_json = load_valid_json(response_text)
+            if (repsonse_json is None) or (not jsonschema.validate(repsonse_json, short_ffn_config_schema)):
+                logger.error("Failed to load a valid JSON from OpenAI response")
+                prompt += f""" 
+                Make sure to provide a valid JSON configuration.
+                You previously responded with the text below, which was not recognized as a valid JSON: 
+                <<<
+                {response_text}
+                >>>
+                """
+                response = openAI_request(opeanai_api_key, system_prompt, prompt)                
+            else:
+                logger.debug("Successfully loaded a valid JSON from OpenAI response")
+                break 
+        
+        if i == 2:
+            logger.error("Failed to load a valid JSON from OpenAI response after 3 attempts")
+            return "Failed to load a valid JSON from OpenAI response after 3 attempts"        
+
+            
         logger.debug(f"OpenAI response text: {response_text}")
-        return f"TEST PIPELINE FINALIZATION. OpenAI response text: {response_text}"
+        logger.debug(f"TEST PIPELINE FINALIZATION. OpenAI response text: {response_text}")
+        return f"TEST PIPELINE FINALIZATION. OpenAI response text: {response_text}"        
 
         # Construct the message to be published 
         message_data = {
