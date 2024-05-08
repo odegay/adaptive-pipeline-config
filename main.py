@@ -1,11 +1,11 @@
 import base64
 import json
-from adpipsvcfuncs import publish_to_pubsub, fetch_gcp_secret
+from adpipsvcfuncs import publish_to_pubsub, fetch_gcp_secret, openAI_request
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
 import logging
 import requests
-from promtps import first_prompt, additional_prompt
+from promtps import system_prompt, get_first_request_prompt
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 api_url = fetch_gcp_secret('adaptive-pipeline-persistence-layer-url')
 api_key = fetch_gcp_secret('adaptive-pipeline-API-token')
+opeanai_api_key = fetch_gcp_secret('adaptive-pipeline-openai-api-token')
 
 def load_previous_model_configurations():
     #TODO: Implement the logic to load previous model configurations
@@ -44,9 +45,9 @@ def load_previous_model_configurations():
 
 def generate_LLM_prompt():
     # Opens a prompt.txt located in the same folder file and reads the prompt
-    prompt = first_prompt
-    prompt = prompt + " " + load_previous_model_configurations()
-    prompt = prompt + " " + additional_prompt
+    prompt = get_first_request_prompt(50, 100)
+    # prompt = prompt + " " + load_previous_model_configurations()
+    # prompt = prompt + " " + additional_prompt
     return prompt
 
 def validate_message(pubsub_message):
@@ -82,6 +83,16 @@ def adatptive_pipeline_generate_config(event, context):
     
     if (validate_message(pubsub_message) == True):
         prompt = generate_LLM_prompt()
+        response = openAI_request(opeanai_api_key, system_prompt, prompt)
+        if response is None:
+            logger.error("Failed to get a response from OpenAI")
+            return "Failed to get a response from OpenAI"
+        logger.debug(f"OpenAI response: {response}")
+        # Extract the response from OpenAI
+        response_text = response['choices'][0]['message']['content']
+        logger.debug(f"OpenAI response text: {response_text}")
+        return f"TEST PIPELINE FINALIZATION. OpenAI response text: {response_text}"
+
         # Construct the message to be published 
         message_data = {
             "pipeline_id": pubsub_message['pipeline_id'],
