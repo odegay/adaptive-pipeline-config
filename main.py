@@ -89,7 +89,7 @@ def adatptive_pipeline_generate_config(event, context):
             return "Failed to get a response from OpenAI"
         logger.debug(f"OpenAI response: {response}")
         # Extract the response from OpenAI
-        response_text = response['choices'][0]['message']['content']
+        response_text = response.choices[0].message.content
         logger.debug(f"OpenAI response text: {response_text}")
         return f"TEST PIPELINE FINALIZATION. OpenAI response text: {response_text}"
 

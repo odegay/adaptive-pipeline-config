@@ -45,7 +45,7 @@ def get_first_request_prompt(input_layers_ct: int, output_layers_ct: int) -> str
     Start with the one hidden layer configuration.
     The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} units.
     Generate configuration for the hidden layers only, as input and output layers are already defined. 
-    No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON.
+    No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     """
 
 def get_new_layers_request_prompt(input_layers_ct: int, output_layers_ct: int, hidden_layers_ct: int, prev_layers_perf: str) -> str:
@@ -54,7 +54,7 @@ def get_new_layers_request_prompt(input_layers_ct: int, output_layers_ct: int, h
     The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} units.    
     You have already used the following hidden layers quantities with the MAX corresponding accuracy: {prev_layers_perf}
     Generate configuration for the hidden layers only, as input and output layers are already defined.
-    No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON.
+    No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     """
     
 def get_next_layers_request_prompt(input_layers_ct: int, output_layers_ct: int, hidden_layers_ct: int, prev_layers_perf: str, curr_layer_perf) -> str:
@@ -66,7 +66,7 @@ def get_next_layers_request_prompt(input_layers_ct: int, output_layers_ct: int, 
     Generate configuration for the hidden layers only, as input and output layers are already defined.
     Generate a new configuration only and avoid repetitions.
     No comments are allowed as an automated function will use the output.
-    Ensure the response is a valid JSON.
+    Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     You also have the permission to suggest switching to another number of hidden layers. In such case, you should respond "SWITCH TO X HIDDEN LAYERS"
     Where X is the number of hidden layers you want to switch to.
     You can switch only to a number of hidden layers you have not used before (higher than the current number of hidden layers).    
