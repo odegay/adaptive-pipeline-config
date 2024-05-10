@@ -150,12 +150,17 @@ def save_model_configuration_and_publish_message(response_text: str, pipeline_id
 
 #def save_new_layers_ct_and_publish_message():
 
-def newlayers_configuration(pipeline_data, new_layers):
-    current_hidden_layers_ct = pipeline_data['current_hidden_layers_ct']
+def new_layers_configuration(pipeline_data, new_layers):
+    current_hidden_layers_ct = pipeline_data.get('current_hidden_layers_ct')
     pipeline_data['current_hidden_layers_ct'] = new_layers
 
-    if pipeline_data['hidden_layers_configs'] is not None:
-        current_layer = pipeline_data['hidden_layers_configs'].find({"hidden_layers_ct": current_hidden_layers_ct})
+    if pipeline_data.get('hidden_layers_configs') is not None:
+        current_layer = None
+        for layer in pipeline_data['hidden_layers_configs']: # iterate over the list to find the matching layer
+            if layer.get('hidden_layers_ct') == current_hidden_layers_ct:
+                current_layer = layer
+                break
+
         if current_layer is not None:
             current_layer['is_completed'] = True
         else:

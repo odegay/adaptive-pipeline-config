@@ -51,10 +51,10 @@ def get_first_request_prompt(pipeline_data: dict) -> str:
     """
 def get_previous_layers_perf(pipeline_data: dict) -> str:
     prev_layers_perf = ""
-    if pipeline_data["hidden_layers_configs"] is not None:
+    if "hidden_layers_configs" in pipeline_data:
         for layer in pipeline_data["hidden_layers_configs"]:
             if layer["is_completed"]:
-                prev_layers_perf += f"{layer['hidden_layers_ct']} hidden layers with MAX accuracy: {layer['MAX_accuracy']}, "
+                prev_layers_perf += f"\n{layer['hidden_layers_ct']} hidden layers with MAX accuracy: {layer['MAX_accuracy']} "
     return prev_layers_perf
 
 def get_new_layers_request_prompt(pipeline_data: dict, hidden_layers_ct: int) -> str:
@@ -75,11 +75,11 @@ def get_curr_layer_perf(pipeline_data: dict) -> str:
     curr_layer_perf = ""
     hidden_layers_ct = pipeline_data["current_hidden_layers_ct"]
 
-    if pipeline_data["hidden_layers_configs"] is not None:
+    if "hidden_layers_configs" in pipeline_data:
         for layer in pipeline_data["hidden_layers_configs"]:
             if layer["hidden_layers_ct"] == hidden_layers_ct:
                 for config in layer["configurations"]:
-                    curr_layer_perf += f"{config['configuration']} with accuracy: {config['accuracy']}, "
+                    curr_layer_perf += f"\n configuration: {config['configuration']} - accuracy: {config['accuracy']}"
     
     if curr_layer_perf == "":
         curr_layer_perf = "None"
@@ -91,6 +91,7 @@ def get_next_layers_request_prompt(pipeline_data: dict) -> str:
     output_layers_ct = 100
     hidden_layers_ct = pipeline_data["current_hidden_layers_ct"]
     prev_layers_perf = get_previous_layers_perf(pipeline_data)
+    curr_layer_perf = get_curr_layer_perf(pipeline_data)
 
     return f"""
     Generate the next configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layers.
@@ -122,19 +123,100 @@ def generate_LLM_prompt(pipeline_data: dict, need_new_layer: int) -> str:
     # need_new_layer is 0 if no new layer is needed, and equals to the number of new layers needed otherwise
     prompt = None
 
-    if pipeline_data["current_hidden_layers_ct"] is None:
+    if "current_hidden_layers_ct" not in pipeline_data:
         prompt = get_first_request_prompt(pipeline_data)
         return prompt
         
     if need_new_layer > 0:
         prompt = get_new_layers_request_prompt(pipeline_data, need_new_layer)
-        return prompt    
+        return prompt 
     
     prompt = get_next_layers_request_prompt(pipeline_data)
+    return prompt
+    
+# #Testing dictionary to check the new pipline promprt generation
+# pipeline_dict_test_new_pipeline = {
+#     "pipeline_id": "1234",
+#     "status": 1
+#     }
+# #Testing dictionary to check the new hidden layers count prompt generation
+# pipeline_dict_test_new_hidden_layers = {
+#     "pipeline_id": "1234",
+#     "status": 1,
+#     "current_hidden_layers_ct": 1,
+#     "hidden_layers_configs": [
+#         {
+#             "hidden_layers_ct": 1,
+#             "is_completed": True,
+#             "MAX_accuracy": 0.01
+#         },
+#         {
+#             "hidden_layers_ct": 2,
+#             "is_completed": True,
+#             "MAX_accuracy": 0.02
+#         },
+#         {
+#             "hidden_layers_ct": 3,
+#             "is_completed": True,
+#             "MAX_accuracy": 0.03
+#         }
+#     ]
+#     }
+
+# #Testing dictionary to check the next configuration for the same hidden layers count prompt generation
+# pipeline_dict_test_next_hidden_layers = {
+#     "pipeline_id": "1234",
+#     "status": 1,
+#     "current_hidden_layers_ct": 1,
+#     "hidden_layers_configs": [
+#         {
+#             "hidden_layers_ct": 1,
+#             "is_completed": False,
+#             "MAX_accuracy": 0.9,
+#             "configurations": [
+#                 {
+#                     "configuration": "{'l': [{'lt': 'd', 'u': 100, 'kr': '2', 'br': '2', 'krl': 0.001, 'brl': 0.001, 'ki': 'g', 'bi': 'g', 'dr': 0.2, 'bn': true, 'a': 'r', 'r': false}]}",
+#                     "accuracy": 0.5
+#                 }
+#             ]
+#         },
+#                 {
+#             "hidden_layers_ct": 1,
+#             "is_completed": False,
+#             "MAX_accuracy": 0.9,
+#             "configurations": [
+#                 {
+#                     "configuration": "{'l': [{'lt': 'd', 'u': 100, 'kr': '2', 'br': '2', 'krl': 0.001, 'brl': 0.001, 'ki': 'g', 'bi': 'g', 'dr': 0.2, 'bn': true, 'a': 'r', 'r': false}]}",
+#                     "accuracy": 0.5
+#                 }
+#             ]
+#         },
+#                 {
+#             "hidden_layers_ct": 1,
+#             "is_completed": False,
+#             "MAX_accuracy": 0.9,
+#             "configurations": [
+#                 {
+#                     "configuration": "{'l': [{'lt': 'd', 'u': 100, 'kr': '2', 'br': '2', 'krl': 0.001, 'brl': 0.001, 'ki': 'g', 'bi': 'g', 'dr': 0.2, 'bn': true, 'a': 'r', 'r': false}]}",
+#                     "accuracy": 0.5
+#                 }
+#             ]
+#         }
+#     ]
+#     }
+
+# #print(generate_LLM_prompt(pipeline_dict_test_new_pipeline, 1))
+# print(generate_LLM_prompt(pipeline_dict_test_new_hidden_layers, 2))
+# #print(generate_LLM_prompt(pipeline_dict_test_next_hidden_layers, 0))
+
+
+
+
+
     
 
     
-    # prompt = prompt + " " + load_previous_model_configurations()
-prompt = ""
-prompt = prompt + " " + additional_prompt
+#     # prompt = prompt + " " + load_previous_model_configurations()
+# prompt = ""
+# prompt = prompt + " " + additional_prompt
     
