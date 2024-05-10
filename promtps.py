@@ -124,7 +124,7 @@ def generate_LLM_prompt(pipeline_data: dict, need_new_layer: int) -> str:
     prompt = None
 
     if "current_hidden_layers_ct" not in pipeline_data:
-        prompt = get_first_request_prompt(pipeline_data)
+        prompt = get_first_request_prompt(pipeline_data)        
         return prompt
         
     if need_new_layer > 0:

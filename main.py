@@ -5,11 +5,11 @@ from adpipsvcfuncs import publish_to_pubsub, load_current_pipeline_data
 from adpipsvcfuncs import fetch_gcp_secret, openAI_request, load_valid_json
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
-import logging
 import requests 
 import re
 from promtps import system_prompt, get_first_request_prompt, generate_LLM_prompt
 from configuration_schemas import short_ffn_config_schema
+import logging
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -141,14 +141,14 @@ def iterate_LLM_cycle(prompt: str, pipeline_data: dict) -> dict:
 
 def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
     response_json = load_valid_json(pipeline_data['current_configuration'])
-    pipeline_data = None
+
 
     if response_json is None:
         logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
         return False
   
     pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value     
-
+    
     #API call to save the configuration
     api_url = fetch_gcp_secret('adaptive-pipeline-persistence-layer-url')
     api_key = fetch_gcp_secret('adaptive-pipeline-API-token')
@@ -195,6 +195,8 @@ def adatptive_pipeline_generate_config(event, context):
     if pipeline_data is None:
         logger.error(f"Failed to load the pipeline data for pipeline_id: {pipeline_id}")
         return f"Failed to load the pipeline data for pipeline_id: {pipeline_id}"
+    else:
+        logger.debug(f"Loaded pipeline data for pipeline_id: {pipeline_id}. Data: {pipeline_data}")
 
     prompt = generate_LLM_prompt(pipeline_data, 0)
     pipeline_data = iterate_LLM_cycle(prompt, pipeline_data)
