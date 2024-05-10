@@ -27,24 +27,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 opeanai_api_key = fetch_gcp_secret('adaptive-pipeline-openai-api-token')
 
-def load_previous_model_configurations():
-    #TODO: Implement the logic to load previous model configurations
-
-    json_string_config = """
-    {
-    "layers": [
-        {"layer_type":"dense", "units":96, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "activation":"relu", "kernel_regularizer_lambda":0.001},
-        {"layer_type":"dense", "units":64, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "dropout_rate":0.4, "activation":"relu", "kernel_regularizer_lambda":0.001},
-        {"layer_type":"dense", "units":32, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "dropout_rate":0.4, "activation":"relu", "kernel_regularizer_lambda":0.001},
-        {"layer_type":"dense", "units":16, "kernel_regularizer":"l2", "kernel_initializer":"glorot_uniform", "bias_initializer":"zeros", "activation":"relu", "kernel_regularizer_lambda":0.001}
-    ]
-    }
-    """
-
-    # Load previous model configurations    
-    logger.debug("Placeholder for loading previous model configurations")
-    return json_string_config
-
 def validate_new_model_config_JSON(response_text):
     repsonse_json = load_valid_json(response_text)
     if (repsonse_json is None):
@@ -114,42 +96,6 @@ def check_layers_increase(response):
     # return None if the pattern was not found
     return None
 
-def iterate_LLM_cycle(prompt: str, pipeline_id: str):
-    response_text = send_OpenAI_request(prompt)            
-    new_layers = check_layers_increase(response_text)
-    if new_layers is None:
-        for i in range(3):
-            prompt = validate_new_model_config_JSON(response_text)
-            if prompt is None:
-                logger.debug(f"Successfully validated the JSON configuration, JSON: {response_text}")
-                return response_text
-            else:
-                response_text = send_OpenAI_request(prompt)
-        if i == 2:
-            logger.error(f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON text is {response_text}")
-            return f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON text is {response_text}"
-    else:
-        logger.debug(f"New hidden layers number request detected: {new_layers}")   
-
-def save_model_configuration_and_publish_message(response_text: str, pipeline_id: str):
-    response_json = load_valid_json(response_text)
-    pipeline_data = None
-
-    if response_json is None:
-        logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
-        return False
-  
-    pipeline_data['current_configuration'] = response_text
-    pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value     
-    
-    pub_message_data = {
-    "pipeline_id": pipeline_id,
-    "status": MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value,
-    "current_configuration": response_text
-    }   
-
-#def save_new_layers_ct_and_publish_message():
-
 def new_layers_configuration(pipeline_data, new_layers):
     current_hidden_layers_ct = pipeline_data.get('current_hidden_layers_ct')
     pipeline_data['current_hidden_layers_ct'] = new_layers
@@ -169,9 +115,66 @@ def new_layers_configuration(pipeline_data, new_layers):
     else:
         logger.error("Failed to find the hidden_layers_configs in the pipeline data")
         return None
-
     return pipeline_data
 
+def iterate_LLM_cycle(prompt: str, pipeline_data: dict) -> dict:
+    response_text = send_OpenAI_request(prompt)            
+    new_layers = check_layers_increase(response_text)
+    if new_layers is None:
+        for i in range(3):
+            prompt = validate_new_model_config_JSON(response_text)
+            if prompt is None:
+                logger.debug(f"Successfully validated the JSON configuration, JSON: {response_text}")
+                pipeline_data['current_configuration'] = response_text
+                return pipeline_data
+            else:
+                response_text = send_OpenAI_request(prompt)
+        if i == 2:
+            logger.error(f"Failed to load a valid JSON from OpenAI response after 3 attempts. The last response JSON text is {response_text}")
+            return None
+    else:
+        pipeline_data = new_layers_configuration(pipeline_data, new_layers)
+        prompt = generate_LLM_prompt(pipeline_data, new_layers)
+        logger.debug(f"New hidden layers number request detected: {new_layers}")   
+        pipeline_data = iterate_LLM_cycle(prompt, pipeline_data)
+
+
+def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
+    response_json = load_valid_json(pipeline_data['current_configuration'])
+    pipeline_data = None
+
+    if response_json is None:
+        logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
+        return False
+  
+    pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value     
+
+    #API call to save the configuration
+    api_url = fetch_gcp_secret('adaptive-pipeline-persistence-layer-url')
+    api_key = fetch_gcp_secret('adaptive-pipeline-API-token')
+    if not api_url:
+        logger.error("Failed to fetch the API URL")
+        return None
+    headers = {
+            "Authorization": api_key
+        }
+    try:
+        response = requests.put(f"{api_url}/update/{pipeline_data['pipeline_id']}", json=pipeline_data, headers=headers)
+        if response.status_code != 200:
+            logger.error(f"Failed to update the pipeline status. Response: {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        return False
+    
+    pub_message_data = {
+    "pipeline_id": pipeline_data['pipeline_id'],
+    "status": MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value,
+    "current_configuration": pipeline_data['current_configuration']
+    }   
+    logger.debug(f"Publishing message to topic: {TOPICS.ADAPTIVE_PIPELINE_CONFIG_TOPIC.value} with data: {pub_message_data}")
+
+#def save_new_layers_ct_and_publish_message():
 def adatptive_pipeline_generate_config(event, context):        
     pubsub_message = ""
     if 'data' in event:
@@ -194,11 +197,16 @@ def adatptive_pipeline_generate_config(event, context):
         return f"Failed to load the pipeline data for pipeline_id: {pipeline_id}"
 
     prompt = generate_LLM_prompt(pipeline_data, 0)
-    response_text = iterate_LLM_cycle(prompt, pipeline_id)
+    pipeline_data = iterate_LLM_cycle(prompt, pipeline_data)
+    response_text = pipeline_data['current_configuration']
+    
+    if save_model_configuration_and_publish_message(pipeline_data) is False:
+        logger.error(f"TEST PIPELINE FINALIZATION FAILED to save the model configuration and publish the message. OpenAI response text: {response_text}")
+        return f"TEST PIPELINE FINALIZATION Failed to save the model configuration and publish the message"
 
     logger.debug(f"OpenAI response text: {response_text}")
-    logger.debug(f"TEST PIPELINE FINALIZATION. OpenAI response text: {response_text}")
-    return f"TEST PIPELINE FINALIZATION. OpenAI response text: {response_text}"        
+    logger.debug(f"TEST PIPELINE FINALIZATION SUCCESS. OpenAI response text: {response_text}")
+    return f"TEST PIPELINE FINALIZATION SUCCESS. OpenAI response text: {response_text}"        
 
     # Construct the message to be published 
     # message_data = {
