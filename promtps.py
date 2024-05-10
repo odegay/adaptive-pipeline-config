@@ -39,7 +39,9 @@ system_prompt = """
     }
     """
 
-def get_first_request_prompt(input_layers_ct: int, output_layers_ct: int) -> str:
+def get_first_request_prompt(pipeline_data: dict) -> str:
+    input_layers_ct = 50
+    output_layers_ct = 100
     return f"""
     Generate the first configuration for the Feed-Forward Network (FFN).
     Start with the one hidden layer configuration.
@@ -47,8 +49,20 @@ def get_first_request_prompt(input_layers_ct: int, output_layers_ct: int) -> str
     Generate configuration for the hidden layers only, as input and output layers are already defined. 
     No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     """
+def get_previous_layers_perf(pipeline_data: dict) -> str:
+    prev_layers_perf = ""
+    if pipeline_data["hidden_layers_configs"] is not None:
+        for layer in pipeline_data["hidden_layers_configs"]:
+            if layer["is_completed"]:
+                prev_layers_perf += f"{layer['hidden_layers_ct']} hidden layers with MAX accuracy: {layer['MAX_accuracy']}, "
+    return prev_layers_perf
 
-def get_new_layers_request_prompt(input_layers_ct: int, output_layers_ct: int, hidden_layers_ct: int, prev_layers_perf: str) -> str:
+def get_new_layers_request_prompt(pipeline_data: dict, hidden_layers_ct: int) -> str:
+    input_layers_ct = 50
+    output_layers_ct = 100
+
+    prev_layers_perf = get_previous_layers_perf(pipeline_data)
+
     return f"""
     Generate the first configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layers.
     The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} units.    
@@ -57,7 +71,27 @@ def get_new_layers_request_prompt(input_layers_ct: int, output_layers_ct: int, h
     No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     """
     
-def get_next_layers_request_prompt(input_layers_ct: int, output_layers_ct: int, hidden_layers_ct: int, prev_layers_perf: str, curr_layer_perf) -> str:
+def get_curr_layer_perf(pipeline_data: dict) -> str:
+    curr_layer_perf = ""
+    hidden_layers_ct = pipeline_data["current_hidden_layers_ct"]
+
+    if pipeline_data["hidden_layers_configs"] is not None:
+        for layer in pipeline_data["hidden_layers_configs"]:
+            if layer["hidden_layers_ct"] == hidden_layers_ct:
+                for config in layer["configurations"]:
+                    curr_layer_perf += f"{config['configuration']} with accuracy: {config['accuracy']}, "
+    
+    if curr_layer_perf == "":
+        curr_layer_perf = "None"
+
+    return curr_layer_perf
+
+def get_next_layers_request_prompt(pipeline_data: dict) -> str:
+    input_layers_ct = 50
+    output_layers_ct = 100
+    hidden_layers_ct = pipeline_data["current_hidden_layers_ct"]
+    prev_layers_perf = get_previous_layers_perf(pipeline_data)
+
     return f"""
     Generate the next configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layers.
     The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} units.    
@@ -80,3 +114,27 @@ additional_prompt = """
     You also have the permission to suggest switching to another number of hidden layers. In such case, you should respond "SWITCH TO X HIDDEN LAYERS"
     It is important to note that if you switch to a different number of hidden layers, you will never be able to return to the number of hidden layers you used before.
 """
+
+def get_input_layers_ct() -> int:
+    return 50
+
+def generate_LLM_prompt(pipeline_data: dict, need_new_layer: int) -> str:    
+    # need_new_layer is 0 if no new layer is needed, and equals to the number of new layers needed otherwise
+    prompt = None
+
+    if pipeline_data["current_hidden_layers_ct"] is None:
+        prompt = get_first_request_prompt(pipeline_data)
+        return prompt
+        
+    if need_new_layer > 0:
+        prompt = get_new_layers_request_prompt(pipeline_data, need_new_layer)
+        return prompt    
+    
+    prompt = get_next_layers_request_prompt(pipeline_data)
+    
+
+    
+    # prompt = prompt + " " + load_previous_model_configurations()
+prompt = ""
+prompt = prompt + " " + additional_prompt
+    
