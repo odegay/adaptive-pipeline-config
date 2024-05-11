@@ -172,7 +172,7 @@ def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
     "status": MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value,
     "current_configuration": pipeline_data['current_configuration']
     }   
-    logger.debug(f"Publishing message to topic: {TOPICS.ADAPTIVE_PIPELINE_CONFIG_TOPIC.value} with data: {pub_message_data}")
+    logger.debug(f"Publishing message to topic: {TOPICS.CONFIG_TOPIC.value} with data: {pub_message_data}")
 
 #def save_new_layers_ct_and_publish_message():
 def adatptive_pipeline_generate_config(event, context):        
