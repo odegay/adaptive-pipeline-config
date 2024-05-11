@@ -147,6 +147,10 @@ def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
         logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
         return False
   
+    #At the first run of the pipeline, the current_hidden_layers_ct is not set, so we set it to 1
+    if "current_hidden_layers_ct" not in pipeline_data:
+        pipeline_data['current_hidden_layers_ct'] = 1
+
     pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value     
     
     #API call to save the configuration
