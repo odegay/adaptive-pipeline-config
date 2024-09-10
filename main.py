@@ -1,7 +1,7 @@
 import base64
 import json
 import jsonschema
-from adpipsvcfuncs import publish_to_pubsub, load_current_pipeline_data
+from adpipsvcfuncs import publish_to_pubsub, load_current_pipeline_data, save_current_pipeline_data
 from adpipsvcfuncs import fetch_gcp_secret, openAI_request, load_valid_json
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 opeanai_api_key = fetch_gcp_secret('adaptive-pipeline-openai-api-token')
 
-def validate_new_model_config_JSON(response_text):
+def validate_new_model_config_JSON(response_text: str) -> str:
     repsonse_json = load_valid_json(response_text)
     if (repsonse_json is None):
         logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {repsonse_json}")
@@ -57,7 +57,7 @@ def validate_new_model_config_JSON(response_text):
             """
             return prompt
 
-def validate_message(pubsub_message):
+def validate_message(pubsub_message: dict) -> bool:
     # Validate the message to start a model configuration
     # Log the entire message and its type
     logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")
@@ -87,7 +87,7 @@ def send_OpenAI_request(prompt: str) -> str:
     logger.debug(f"OpenAI response text: {response_text}")
     return response_text
 
-def check_layers_increase(response):
+def check_layers_increase(response: str) -> int:
     pattern = r'SWITCH TO (\d{1,3}) HIDDEN LAYERS'
     match = re.search(pattern, response)
     if match:
@@ -96,7 +96,7 @@ def check_layers_increase(response):
     # return None if the pattern was not found
     return None
 
-def new_layers_configuration(pipeline_data, new_layers):
+def new_layers_configuration(pipeline_data: dict, new_layers: int) -> dict:
     current_hidden_layers_ct = pipeline_data.get('current_hidden_layers_ct')
     pipeline_data['current_hidden_layers_ct'] = new_layers
 
@@ -142,40 +142,21 @@ def iterate_LLM_cycle(prompt: str, pipeline_data: dict) -> dict:
 def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
     response_json = load_valid_json(pipeline_data['current_configuration'])
 
-
     if response_json is None:
         logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
-        return False
-  
+        return False  
     #At the first run of the pipeline, the current_hidden_layers_ct is not set, so we set it to 1
     if "current_hidden_layers_ct" not in pipeline_data:
         pipeline_data['current_hidden_layers_ct'] = 1
-
-    pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value     
-    
+    pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value         
     #API call to save the configuration
-    api_url = fetch_gcp_secret('adaptive-pipeline-persistence-layer-url')
-    api_key = fetch_gcp_secret('adaptive-pipeline-API-token')
-    if not api_url:
-        logger.error("Failed to fetch the API URL")
-        return None
-    headers = {
-            "Authorization": api_key
-        }
-    try:
-        response = requests.put(f"{api_url}/update/{pipeline_data['pipeline_id']}", json=pipeline_data, headers=headers)
-        if response.status_code != 200:
-            logger.error(f"Failed to update the pipeline status. Response: {response.text}")
-            return False
-    except Exception as e:
-        logger.error(f"Error: {str(e)}")
-        return False
-    
+    save_current_pipeline_data(pipeline_data)    
     pub_message_data = {
     "pipeline_id": pipeline_data['pipeline_id'],
     "status": MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value,
     "current_configuration": pipeline_data['current_configuration']
-    }   
+    }
+    publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, pub_message_data)   
     logger.debug(f"Publishing message to topic: {TOPICS.CONFIG_TOPIC.value} with data: {pub_message_data}")
 
 #def save_new_layers_ct_and_publish_message():
@@ -206,6 +187,9 @@ def adatptive_pipeline_generate_config(event, context):
     pipeline_data = iterate_LLM_cycle(prompt, pipeline_data)
     response_text = pipeline_data['current_configuration']
     
+    if "current_hidden_layers_ct" not in pipeline_data:
+        pipeline_data['current_hidden_layers_ct'] = 1
+    
     if save_model_configuration_and_publish_message(pipeline_data) is False:
         logger.error(f"TEST PIPELINE FINALIZATION FAILED to save the model configuration and publish the message. OpenAI response text: {response_text}")
         return f"TEST PIPELINE FINALIZATION Failed to save the model configuration and publish the message"
@@ -213,30 +197,3 @@ def adatptive_pipeline_generate_config(event, context):
     logger.debug(f"OpenAI response text: {response_text}")
     logger.debug(f"TEST PIPELINE FINALIZATION SUCCESS. OpenAI response text: {response_text}")
     return f"TEST PIPELINE FINALIZATION SUCCESS. OpenAI response text: {response_text}"        
-
-    # Construct the message to be published 
-    # message_data = {
-    #     "pipeline_id": pubsub_message['pipeline_id'],
-    #     "status": MSG_TYPE.REQUEST_LLM_NEW_MODEL_CONFIGURATION.value,
-    #     "prompt": prompt            
-    # }
-
-    # if not api_url:
-    #     logger.error("Failed to fetch the API URL")
-    #     return None
-    # headers = {
-    #     "Authorization": api_key
-    # }
-    # try:
-    #     response = requests.put(f"{api_url}/update/{pubsub_message['pipeline_id']}", json=message_data, headers=headers)
-    #     if response.status_code != 200:
-    #         logger.error(f"Failed to update the pipeline status. Response: {response.text}")                
-    #         return "Failed to update the pipeline status. Error: {response.text}"
-    # except Exception as e:
-    #     logger.error(f"Error: {str(e)}")
-    #     return "Failed to update the pipeline status. Error: {str(e)}"            
-
-    # topic_name = "adaptive-pipeline-config-topic"
-    # publish_to_pubsub(topic_name, message_data)
-    # logger.debug(f"Published message to topic: {topic_name} with data: {message_data} configuration generated")
-    # return f"Successfully published a message to {topic_name} with data: {message_data} configuration generated"
