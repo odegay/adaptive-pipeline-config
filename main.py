@@ -148,16 +148,18 @@ def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
     #At the first run of the pipeline, the current_hidden_layers_ct is not set, so we set it to 1
     if "current_hidden_layers_ct" not in pipeline_data:
         pipeline_data['current_hidden_layers_ct'] = 1
-    pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value         
+    pipeline_data['status'] = MSG_TYPE.GENERATE_NEW_MODEL.value
+    #pipeline_data['status'] = MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value             
     #API call to save the configuration
     save_current_pipeline_data(pipeline_data)    
     pub_message_data = {
     "pipeline_id": pipeline_data['pipeline_id'],
-    "status": MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value,
+    "status": MSG_TYPE.GENERATE_NEW_MODEL.value,
+    #"status": MSG_TYPE.NEW_MODEL_CONFIGURATION_SUCCESS.value,
     "current_configuration": pipeline_data['current_configuration']
     }
     publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, pub_message_data)   
-    logger.debug(f"Publishing message to topic: {TOPICS.CONFIG_TOPIC.value} with data: {pub_message_data}")
+    logger.debug(f"Publishing message to topic: {TOPICS.WORKFLOW_TOPIC.value} with data: {pub_message_data}")
 
 #def save_new_layers_ct_and_publish_message():
 def adatptive_pipeline_generate_config(event, context):        
