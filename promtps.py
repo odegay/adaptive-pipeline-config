@@ -56,8 +56,8 @@ def get_first_request_prompt(pipeline_data: dict) -> str:
     return f"""
     Generate the first configuration for the Feed-Forward Network (FFN).
     Start with the one hidden layer configuration.
-    The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} units.
-    Generate configuration for the hidden layers only, as input and output layers are already defined. 
+    The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} classes (softmax activation).
+    Generate configuration for the model and hidden layers only, as input and output layers are already defined. 
     No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     """
 def get_previous_layers_perf(pipeline_data: dict) -> str:
@@ -76,9 +76,9 @@ def get_new_layers_request_prompt(pipeline_data: dict, hidden_layers_ct: int) ->
 
     return f"""
     Generate the first configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layers.
-    The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} units.    
+    The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} classes (softmax activation).    
     You have already used the following hidden layers quantities with the MAX corresponding accuracy: {prev_layers_perf}
-    Generate configuration for the hidden layers only, as input and output layers are already defined.
+    Generate configuration for the model and hidden layers only, as input and output layers are already defined.
     No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     """
     
@@ -106,10 +106,10 @@ def get_next_layers_request_prompt(pipeline_data: dict) -> str:
 
     return f"""
     Generate the next configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layers.
-    The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} units.    
+    The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} classes (softmax activation).
     You have already used the following hidden layers quantities with the MAX corresponding accuracy: {prev_layers_perf}
     Within the current number of hidden layers, you have already used the following configurations with the corresponding accuracy: {curr_layer_perf}
-    Generate configuration for the hidden layers only, as input and output layers are already defined.
+    Generate configuration for the model and hidden layers only, as input and output layers are already defined.
     Generate a new configuration only and avoid repetitions.
     No comments are allowed as an automated function will use the output.
     Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
@@ -121,7 +121,7 @@ def get_next_layers_request_prompt(pipeline_data: dict) -> str:
 
 additional_prompt = """    
     Generate the next configuration for the Feed-Forward Network (FFN).
-    Generate a new configuration only. Generate configuration for the hidden layers only, as input and output layers are already defined. 
+    Generate a new configuration only. Generate configuration for the model and hidden layers only, as input and output layers are already defined. 
     No comments are allowed as an automated function will use the output.  
     You also have the permission to suggest switching to another number of hidden layers. In such case, you should respond "SWITCH TO X HIDDEN LAYERS"
     It is important to note that if you switch to a different number of hidden layers, you will never be able to return to the number of hidden layers you used before.
