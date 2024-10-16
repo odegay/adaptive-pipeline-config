@@ -65,6 +65,24 @@ short_ffn_config_schema = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
+        "cfg": { # model configuration   
+            "type": "object",
+            "properties": {
+                "lm": { # lambda
+                    "type": "number"
+                },
+                "bs": { # batch_size
+                    "type": "number"
+                },
+                "ep": { # epochs
+                    "type": "number"
+                },
+                "lr": { # learning_rate
+                    "type": "number"
+                }
+            },
+            "required": ["lm", "bs", "ep", "lr"]                         
+        },
         "l": {  # layers
             "type": "array",
             "items": {
