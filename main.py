@@ -27,8 +27,23 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 opeanai_api_key = fetch_gcp_secret('adaptive-pipeline-openai-api-token')
 
+def remove_null_values(data):
+    """
+    Recursively remove keys with value None or "null" (string) from JSON-like objects.
+    """
+    if isinstance(data, dict):
+        # Use dictionary comprehension to filter out None and "null"
+        return {k: remove_null_values(v) for k, v in data.items() if v is not None and v != "null"}
+    elif isinstance(data, list):
+        # Apply the same function to each item in the list
+        return [remove_null_values(item) for item in data]
+    else:
+        return data
+
 def validate_new_model_config_JSON(response_text: str, pipeline_data: dict, isNew: int) -> str:
     repsonse_json = load_valid_json(response_text)
+    repsonse_json = remove_null_values(repsonse_json)
+    
     if (repsonse_json is None):
         logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {repsonse_json}")
         prompt = generate_LLM_prompt(pipeline_data, isNew)
