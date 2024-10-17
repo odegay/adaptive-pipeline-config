@@ -92,11 +92,14 @@ short_ffn_config_schema = {
                 "cd": { # cooldown
                     "type": "number"
                 },
-                "mlr": { # min_lr
+                "mlr": { # min_learning_rate
                     "type": "number"
-                }                
+                },
+                "esp": { # early_stopping_patience
+                    "type": "number"
+                }                                
             },
-            "required": ["lm", "bs", "ep", "lr", "lf", "lp", "md", "cd", "mlr"]                       
+            "required": ["lm", "bs", "ep", "lr", "lf", "lp", "md", "cd", "mlr", "esp"]                       
         },
         "l": {  # layers
             "type": "array",

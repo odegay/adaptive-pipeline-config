@@ -19,14 +19,15 @@ system_prompt = """
                 "lm": {"type": "number"},  // lambda
                 "bs": {"type": "number"},  // batch_size
                 "ep": {"type": "number"},  // epochs
-                "lr": {"type": "number"}   // learning_rate
-                "lf": {"type": "number"}   // learning_rate_factor
-                "lp": {"type": "number"}   // learning_rate_patience
-                "md": {"type": "number"}   // min_delta
-                "cd": {"type": "number"}   // cooldown
-                "mlr": {"type": "number"}  // min_learning_rate                                
+                "lr": {"type": "number"},   // learning_rate
+                "lf": {"type": "number"},   // learning_rate_factor
+                "lp": {"type": "number"},   // learning_rate_patience
+                "md": {"type": "number"},   // min_delta
+                "cd": {"type": "number"},   // cooldown
+                "mlr": {"type": "number"},  // min_learning_rate                                
+                "esp": {"type": "number"}  // early_stopping_patience
             },
-            "required": ["lm", "bs", "ep", "lr", "lf", "lp", "md", "cd", "mlr"]            
+            "required": ["lm", "bs", "ep", "lr", "lf", "lp", "md", "cd", "mlr", "esp"]
         },            
         "l": {  // Layer configurations
         "type": "array",
