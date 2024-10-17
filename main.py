@@ -27,11 +27,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 opeanai_api_key = fetch_gcp_secret('adaptive-pipeline-openai-api-token')
 
-def validate_new_model_config_JSON(response_text: str) -> str:
+def validate_new_model_config_JSON(response_text: str, pipeline_data: dict, isNew: int) -> str:
     repsonse_json = load_valid_json(response_text)
     if (repsonse_json is None):
         logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {repsonse_json}")
-        prompt = generate_LLM_prompt()
+        prompt = generate_LLM_prompt(pipeline_data, isNew)
         prompt += f""" 
         Make sure to provide a valid JSON configuration.
         You previously responded with the text below, it failed to upload as a valid JSON:
@@ -47,7 +47,7 @@ def validate_new_model_config_JSON(response_text: str) -> str:
             return None
         except Exception as ve:
             logger.error(f"Failed to validate the JSON configuration. Error: {ve}")
-            prompt = generate_LLM_prompt()
+            prompt = generate_LLM_prompt(pipeline_data, 0)
             prompt += f""" 
             Make sure to provide a valid JSON configuration.
             You previously responded with the text below, it did not pass the schema validation:
@@ -122,7 +122,7 @@ def iterate_LLM_cycle(prompt: str, pipeline_data: dict) -> dict:
     new_layers = check_layers_increase(response_text)
     if new_layers is None:
         for i in range(3):
-            prompt = validate_new_model_config_JSON(response_text)
+            prompt = validate_new_model_config_JSON(response_text, pipeline_data, 0)
             if prompt is None:
                 logger.debug(f"Successfully validated the JSON configuration, JSON: {response_text}")
                 pipeline_data['current_configuration'] = response_text
