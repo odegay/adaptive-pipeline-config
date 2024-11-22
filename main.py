@@ -2,7 +2,7 @@ import base64
 import json
 import jsonschema
 from adpipsvcfuncs import publish_to_pubsub, load_current_pipeline_data, save_current_pipeline_data
-from adpipsvcfuncs import fetch_gcp_secret, openAI_request, load_valid_json
+from adpipsvcfuncs import fetch_gcp_secret, load_valid_json
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
 import requests 
@@ -10,6 +10,7 @@ import re
 from promtps import system_prompt, get_first_request_prompt, generate_LLM_prompt
 from configuration_schemas import short_ffn_config_schema
 import logging
+from openai import OpenAI
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -91,7 +92,27 @@ def validate_message(pubsub_message: dict) -> bool:
         logger.debug("Message type is missing in the message")
         return False
     
+def openAI_request(api_key: str, role: str, request: str) -> dict:
+    client = OpenAI(api_key=api_key)
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": role},
+                {"role": "user", "content": request},
+            ],
+            temperature=1,
+            max_tokens=16383,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0)        
+    except Exception as e:
+        logger.error(f"Failed to get completion from OpenAI: {str(e)}")
+        return None
+    return completion
+
 def send_OpenAI_request(prompt: str) -> str:
+    logger.debug(f"Sending OpenAI request with system_prompt: {system_prompt} and prompt: {prompt}")
     response = openAI_request(opeanai_api_key, system_prompt, prompt)
     if response is None:
         logger.error("Failed to get a response from OpenAI")
