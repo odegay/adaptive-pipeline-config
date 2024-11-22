@@ -35,7 +35,7 @@ system_prompt = """
             "type": "object",
             "properties": {
             "lt": {"type": "string", "enum": ["d", "c", "s", "l", "g"]},  // Layer types: dense, conv2d, simple_rnn, lstm, gru
-            "u": {"type": ["number", "null"]},                           // Units
+            "u": {"type": ["number", "null"]},                           // Units: Number of neurons in the hidden layer
             "kr": {"type": ["string", "null"], "enum": ["2", "1", "12"]},// kernel regularizer: l2, l1, l1_l2
             "br": {"type": ["string", "null"], "enum": ["2", "1", "12"]}, // bias initializer: l2, l1, l1_l2
             "krl": {"type": ["number", "null"]},                         // Kernel regularization lambdas
@@ -142,6 +142,7 @@ def generate_LLM_prompt(pipeline_data: dict, need_new_layer: int) -> str:
 
     if "current_hidden_layers_ct" not in pipeline_data:
         prompt = get_first_request_prompt(pipeline_data)        
+
         return prompt
         
     if need_new_layer > 0:
@@ -185,6 +186,7 @@ def generate_LLM_prompt(pipeline_data: dict, need_new_layer: int) -> str:
 #     "pipeline_id": "1234",
 #     "status": 1,
 #     "current_hidden_layers_ct": 1,
+
 #     "hidden_layers_configs": [
 #         {
 #             "hidden_layers_ct": 1,
@@ -224,7 +226,34 @@ def generate_LLM_prompt(pipeline_data: dict, need_new_layer: int) -> str:
 
 # #print(generate_LLM_prompt(pipeline_dict_test_new_pipeline, 1))
 # print(generate_LLM_prompt(pipeline_dict_test_new_hidden_layers, 2))
-# #print(generate_LLM_prompt(pipeline_dict_test_next_hidden_layers, 0))
+
+
+
+# pipeline_dict_test_next_hidden_layers = {
+#         "MAX_accuracy": 0.01785714365541935,
+#         "current_hidden_layers_ct": 1,        
+#         "pipeline_id": "fEfinMHrYfgd1WPPR4ac",
+#         "status": 1,
+#         "hidden_layers_configs": [
+#             {
+#             "hidden_layers_ct": 1,            
+#             "is_completed": False,
+#             "MAX_accuracy": 0.01116071455180645,
+#             "configurations": [
+#             {            
+#             "accuracy": 0.01116071455180645,
+#             "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+#             },
+#             {
+#             "accuracy": 0.01785714365541935,
+#             "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+#             }
+#             ]
+#         }
+#         ]
+#     }
+# print(system_prompt)
+# print(generate_LLM_prompt(pipeline_dict_test_next_hidden_layers, 0))
 
 
 
