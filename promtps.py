@@ -117,8 +117,9 @@ def get_next_layers_request_prompt(pipeline_data: dict) -> str:
     curr_layer_perf = get_curr_layer_perf(pipeline_data)
 
     prompt = f"""
-    Generate the next configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layer(s).
+    You are currently working with {hidden_layers_ct} hidden layer(s).
     The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} classes (softmax activation).
+    You should either generate a new configuration for the current number of hidden layers ({hidden_layers_ct} hidden layer(s) ) or suggest switching to another number of hidden layers.    
     """
     if prev_layers_perf != "":
         prompt += f"""    
@@ -134,8 +135,7 @@ def get_next_layers_request_prompt(pipeline_data: dict) -> str:
     Generate a new configuration only and avoid repetitions.
     No comments are allowed as an automated function will use the output.
     Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
-    You also have the permission to suggest switching to another number of hidden layers. In such case, you should respond "SWITCH TO X HIDDEN LAYERS"
-    Where X is the number of hidden layers you want to switch to.
+    If you decide to switch to another number of hidden layers, you should respond "SWITCH TO X HIDDEN LAYERS", wWhere X is the number of hidden layers you want to switch to.
     You can switch only to a number of hidden layers you have not used before (higher than the current number of hidden layers).    
     """
     return prompt
