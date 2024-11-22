@@ -80,13 +80,19 @@ def get_new_layers_request_prompt(pipeline_data: dict, hidden_layers_ct: int) ->
 
     prev_layers_perf = get_previous_layers_perf(pipeline_data)
 
-    return f"""
-    Generate the first configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layers.
+    prompt = f"""    
+    Generate the first configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layer(s).
     The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} classes (softmax activation).    
-    You have already used the following hidden layers quantities with the MAX corresponding accuracy: {prev_layers_perf}
+    """
+    if prev_layers_perf != "":
+        prompt += f"""
+    You have already used the following hidden layers' quantities with the MAX corresponding accuracy: {prev_layers_perf}
+    """
+    prompt += f"""
     Generate configuration for the model and hidden layers only, as input and output layers are already defined.
     No comments are allowed as an automated function will use the output. Ensure the response is a valid JSON. Aviod any formatting make JSON as a single line.
     """
+    return prompt
     
 def get_curr_layer_perf(pipeline_data: dict) -> str:
     curr_layer_perf = ""
@@ -110,11 +116,20 @@ def get_next_layers_request_prompt(pipeline_data: dict) -> str:
     prev_layers_perf = get_previous_layers_perf(pipeline_data)
     curr_layer_perf = get_curr_layer_perf(pipeline_data)
 
-    return f"""
-    Generate the next configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layers.
+    prompt = f"""
+    Generate the next configuration for the Feed-Forward Network (FFN) which has {hidden_layers_ct} hidden layer(s).
     The input layer has {input_layers_ct} units and the output layer has {output_layers_ct} classes (softmax activation).
-    You have already used the following hidden layers quantities with the MAX corresponding accuracy: {prev_layers_perf}
+    """
+    if prev_layers_perf != "":
+        prompt += f"""    
+    You have already used the following hidden layers' quantities with the MAX corresponding accuracy: {prev_layers_perf}
+    """
+    
+    if curr_layer_perf != "":
+        prompt += f"""    
     Within the current number of hidden layers, you have already used the following configurations with the corresponding accuracy: {curr_layer_perf}
+    """
+    prompt += f"""
     Generate configuration for the model and hidden layers only, as input and output layers are already defined.
     Generate a new configuration only and avoid repetitions.
     No comments are allowed as an automated function will use the output.
@@ -123,6 +138,7 @@ def get_next_layers_request_prompt(pipeline_data: dict) -> str:
     Where X is the number of hidden layers you want to switch to.
     You can switch only to a number of hidden layers you have not used before (higher than the current number of hidden layers).    
     """
+    return prompt
 
 
 additional_prompt = """    
@@ -229,31 +245,32 @@ def generate_LLM_prompt(pipeline_data: dict, need_new_layer: int) -> str:
 
 
 
-# pipeline_dict_test_next_hidden_layers = {
-#         "MAX_accuracy": 0.01785714365541935,
-#         "current_hidden_layers_ct": 1,        
-#         "pipeline_id": "fEfinMHrYfgd1WPPR4ac",
-#         "status": 1,
-#         "hidden_layers_configs": [
-#             {
-#             "hidden_layers_ct": 1,            
-#             "is_completed": False,
-#             "MAX_accuracy": 0.01116071455180645,
-#             "configurations": [
-#             {            
-#             "accuracy": 0.01116071455180645,
-#             "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
-#             },
-#             {
-#             "accuracy": 0.01785714365541935,
-#             "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
-#             }
-#             ]
-#         }
-#         ]
-#     }
-# print(system_prompt)
-# print(generate_LLM_prompt(pipeline_dict_test_next_hidden_layers, 0))
+pipeline_dict_test_next_hidden_layers = {
+        "MAX_accuracy": 0.01785714365541935,
+        "current_hidden_layers_ct": 1,        
+        "pipeline_id": "fEfinMHrYfgd1WPPR4ac",
+        "status": 1,
+        "hidden_layers_configs": [
+            {
+            "hidden_layers_ct": 1,            
+            "is_completed": False,
+            "MAX_accuracy": 0.01116071455180645,
+            "configurations": [
+            {            
+            "accuracy": 0.01116071455180645,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            }
+            ]
+        }
+        ]
+    }
+
+print(system_prompt)
+print(generate_LLM_prompt(pipeline_dict_test_next_hidden_layers, 0))
 
 
 
