@@ -31,6 +31,12 @@ opeanai_api_key = fetch_gcp_secret('adaptive-pipeline-openai-api-token')
 def remove_null_values(data):
     """
     Recursively remove keys with value None or "null" (string) from JSON-like objects.
+
+    Args:
+        data (dict or list): The JSON-like object to be cleaned.
+
+    Returns:
+        dict or list: The cleaned JSON-like object with null values removed.
     """
     if isinstance(data, dict):
         # Use dictionary comprehension to filter out None and "null"
@@ -42,6 +48,17 @@ def remove_null_values(data):
         return data
 
 def validate_new_model_config_JSON(response_text: str, pipeline_data: dict, isNew: int) -> str:
+    """
+    Validate the new model configuration JSON received from OpenAI.
+
+    Args:
+        response_text (str): The JSON response text from OpenAI.
+        pipeline_data (dict): The current pipeline data.
+        isNew (int): Flag indicating if it's a new configuration.
+
+    Returns:
+        str: The prompt to be sent to OpenAI if validation fails, otherwise None.
+    """
     repsonse_json = load_valid_json(response_text)
     repsonse_json = remove_null_values(repsonse_json)
     
@@ -74,6 +91,15 @@ def validate_new_model_config_JSON(response_text: str, pipeline_data: dict, isNe
             return prompt
 
 def validate_message(pubsub_message: dict) -> bool:
+    """
+    Validate the Pub/Sub message to start a model configuration.
+
+    Args:
+        pubsub_message (dict): The Pub/Sub message.
+
+    Returns:
+        bool: True if the message is valid, otherwise False.
+    """
     # Validate the message to start a model configuration
     # Log the entire message and its type
     logger.debug(f"Decoded Pub/Sub message: {pubsub_message}")
@@ -93,6 +119,17 @@ def validate_message(pubsub_message: dict) -> bool:
         return False
     
 def openAI_request(api_key: str, role: str, request: str) -> dict:
+    """
+    Send a request to OpenAI and get the response.
+
+    Args:
+        api_key (str): The OpenAI API key.
+        role (str): The role for the OpenAI request.
+        request (str): The request to be sent to OpenAI.
+
+    Returns:
+        dict: The response from OpenAI.
+    """
     client = OpenAI(api_key=api_key)
     try:
         completion = client.chat.completions.create(
@@ -112,6 +149,15 @@ def openAI_request(api_key: str, role: str, request: str) -> dict:
     return completion
 
 def send_OpenAI_request(prompt: str) -> str:
+    """
+    Send a request to OpenAI and get the response text.
+
+    Args:
+        prompt (str): The prompt to be sent to OpenAI.
+
+    Returns:
+        str: The response text from OpenAI.
+    """
     logger.debug(f"Sending OpenAI request with system_prompt: {system_prompt} and prompt: {prompt}")
     response = openAI_request(opeanai_api_key, system_prompt, prompt)
     if response is None:
@@ -124,6 +170,15 @@ def send_OpenAI_request(prompt: str) -> str:
     return response_text
 
 def check_layers_increase(response: str) -> int:
+    """
+    Check if the response from OpenAI suggests increasing the number of hidden layers.
+
+    Args:
+        response (str): The response text from OpenAI.
+
+    Returns:
+        int: The number of hidden layers to switch to, or None if no switch is suggested.
+    """
     pattern = r'SWITCH TO (\d{1,3}) HIDDEN LAYERS'
     match = re.search(pattern, response)
     if match:
@@ -133,6 +188,16 @@ def check_layers_increase(response: str) -> int:
     return None
 
 def new_layers_configuration(pipeline_data: dict, new_layers: int) -> dict:
+    """
+    Update the pipeline data with the new number of hidden layers.
+
+    Args:
+        pipeline_data (dict): The current pipeline data.
+        new_layers (int): The new number of hidden layers.
+
+    Returns:
+        dict: The updated pipeline data.
+    """
     current_hidden_layers_ct = pipeline_data.get('current_hidden_layers_ct')
     pipeline_data['current_hidden_layers_ct'] = new_layers
 
@@ -154,6 +219,16 @@ def new_layers_configuration(pipeline_data: dict, new_layers: int) -> dict:
     return pipeline_data
 
 def iterate_LLM_cycle(prompt: str, pipeline_data: dict) -> dict:
+    """
+    Iterate through the LLM cycle to get a valid model configuration.
+
+    Args:
+        prompt (str): The prompt to be sent to OpenAI.
+        pipeline_data (dict): The current pipeline data.
+
+    Returns:
+        dict: The updated pipeline data with the valid model configuration.
+    """
     response_text = send_OpenAI_request(prompt)            
     new_layers = check_layers_increase(response_text)
     if new_layers is None:
@@ -176,6 +251,15 @@ def iterate_LLM_cycle(prompt: str, pipeline_data: dict) -> dict:
 
 
 def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
+    """
+    Save the model configuration and publish a message to the Pub/Sub topic.
+
+    Args:
+        pipeline_data (dict): The current pipeline data.
+
+    Returns:
+        bool: True if the configuration is saved and the message is published, otherwise False.
+    """
     response_json = load_valid_json(pipeline_data['current_configuration'])
 
     if response_json is None:
@@ -197,8 +281,17 @@ def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
     publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, pub_message_data)   
     logger.debug(f"Publishing message to topic: {TOPICS.WORKFLOW_TOPIC.value} with data: {pub_message_data}")
 
-#def save_new_layers_ct_and_publish_message():
 def adatptive_pipeline_generate_config(event, context):        
+    """
+    Cloud Function to generate a new model configuration for the adaptive pipeline.
+
+    Args:
+        event (dict): The event data from Pub/Sub.
+        context (google.cloud.functions.Context): The context of the event.
+
+    Returns:
+        str: The result of the function execution.
+    """
     pubsub_message = ""
     if 'data' in event:
         pubsub_message = base64.b64decode(event['data']).decode('utf-8')
