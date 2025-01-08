@@ -263,14 +263,42 @@ pipeline_dict_test_next_hidden_layers = {
             {
             "accuracy": 0.01785714365541935,
             "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
+            },
+            {
+            "accuracy": 0.01785714365541935,
+            "configuration": {'"cfg": {"lm": 0.01,"bs": 32,"ep": 50,"lr": 0.001,"lf": 0.1,"lp": 5,"md": 0.001,"cd": 2,"mlr": 1e-06,"esp": 10},"l": [{"lt": "d","u": 50,"kr": "2","br": "2","krl": 0.01,"brl": 0.01,"ki": "g","bi": "g","dr": 0.2,"bn": true,"a": "r","r": false}]'}
             }
             ]
         }
         ]
     }
 
-print(system_prompt)
-print(generate_LLM_prompt(pipeline_dict_test_next_hidden_layers, 0))
+# print(system_prompt)
+# print(generate_LLM_prompt(pipeline_dict_test_next_hidden_layers, 0))
 
 
 
