@@ -1,8 +1,7 @@
 import base64
 import json
 import jsonschema
-from adpipsvcfuncs import publish_to_pubsub, load_current_pipeline_data, save_current_pipeline_data
-from adpipsvcfuncs import fetch_gcp_secret, load_valid_json
+import adpipsvcfuncs
 from adpipwfwconst import MSG_TYPE
 from adpipwfwconst import PIPELINE_TOPICS as TOPICS
 import requests 
@@ -10,6 +9,7 @@ import re
 from promtps import system_prompt, get_first_request_prompt, generate_LLM_prompt
 from configuration_schemas import short_ffn_config_schema
 import logging
+import os
 from openai import OpenAI
 
 root_logger = logging.getLogger()
@@ -26,7 +26,82 @@ if not root_logger.handlers:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
-opeanai_api_key = fetch_gcp_secret('adaptive-pipeline-openai-api-token')
+
+ATTEMPTS_ALLOWED_PER_LAYER = 3
+# Local mode switch - defaults to cloud behavior (USE_LOCAL_MODE=false) if env variable is absent
+USE_LOCAL_MODE = os.getenv('USE_LOCAL_MODE', 'false').lower() == 'true'
+
+if USE_LOCAL_MODE:
+    logger.info("Running in LOCAL MODE. Using local files and mocked Pub/Sub.")
+else:
+    logger.info("Running in CLOUD MODE. Using GCP services for Pub/Sub and secrets.")
+# Set file for local Pub/Sub simulation
+LOCAL_PUBSUB_FILE = "pubsub_output.json"
+
+# Function to fetch OpenAI API key based on mode
+def get_openai_api_key():
+    if USE_LOCAL_MODE:
+        return os.getenv('OPENAI_API_KEY', 'default-local-key')
+    else:
+        return adpipsvcfuncs.fetch_gcp_secret('adaptive-pipeline-openai-api-token')
+# Fetch OpenAI API Key
+openai_api_key = get_openai_api_key()
+
+def load_valid_json(string) -> dict:
+    try:
+        loaded_json = json.loads(string)
+        logger.debug(f"Successfully loaded JSON: {loaded_json} for string: {string}")
+        return loaded_json
+    except Exception as e:
+        logger.error(f"JSON validation failed: {str(e)}, string: {string}")
+        return None
+
+# Overwrite the publish_to_pubsub function for local mode
+def publish_to_pubsub(topic, message):
+    """
+    Publish a message to Pub/Sub or write to a local file in local mode.
+    """
+    if USE_LOCAL_MODE:
+        logger.debug(f"Local mode: Writing message to {LOCAL_PUBSUB_FILE}")
+        try:
+            with open(LOCAL_PUBSUB_FILE, 'a') as f:
+                f.write(json.dumps({'topic': topic, 'message': message}) + '\n')
+        except Exception as e:
+            logger.error(f"Failed to write to {LOCAL_PUBSUB_FILE}: {e}")
+    else:
+        # Original cloud Pub/Sub publishing logic
+        logger.debug(f"Publishing message to Pub/Sub topic: {topic} with data: {message}")
+        # Assume the publish function from adpipsvcfuncs is being used here.
+        # Uncomment the following line if you want to publish to GCP Pub/Sub.
+        adpipsvcfuncs.publish_to_pubsub(topic, message)
+
+# Modify pipeline data load/save for local mode
+def load_current_pipeline_data(pipeline_id):
+    if USE_LOCAL_MODE:
+        # Load from local file in local mode
+        try:
+            with open(f"pipeline_{pipeline_id}.json", 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logger.error(f"Pipeline data for ID {pipeline_id} not found locally.")
+            return None
+    else:
+        # Original cloud data loading logic
+        return adpipsvcfuncs.load_current_pipeline_data(pipeline_id)
+    
+def save_current_pipeline_data(pipeline_data):
+    if USE_LOCAL_MODE:
+        # Save to local file in local mode
+        try:
+            pipeline_id = pipeline_data.get('pipeline_id', 'unknown')
+            with open(f"pipeline_{pipeline_id}.json", 'w') as f:
+                json.dump(pipeline_data, f, indent=4)
+            logger.debug(f"Pipeline data saved locally for ID {pipeline_id}")
+        except Exception as e:
+            logger.error(f"Failed to save pipeline data locally: {e}")
+    else:
+        # Original cloud data saving logic
+        adpipsvcfuncs.save_current_pipeline_data(pipeline_data)
 
 def remove_null_values(data):
     """
@@ -59,6 +134,10 @@ def validate_new_model_config_JSON(response_text: str, pipeline_data: dict, isNe
     Returns:
         str: The prompt to be sent to OpenAI if validation fails, otherwise None.
     """
+    # Preprocess the response_text to handle capitalized boolean values
+    # response_text = response_text.replace(": True", ":true").replace(": False", ":false")
+    # response_text = response_text.replace(":True", ":true").replace(":False", ":false")
+
     repsonse_json = load_valid_json(response_text)
     repsonse_json = remove_null_values(repsonse_json)
     
@@ -148,6 +227,11 @@ def openAI_request(api_key: str, role: str, request: str) -> dict:
         return None
     return completion
 
+def fix_LLM_response_typos(response: str) -> str:
+    response_text = response.replace(": True", ":true").replace(": False", ":false")
+    response_text = response.replace(":True", ":true").replace(":False", ":false")
+    return response_text
+
 def send_OpenAI_request(prompt: str) -> str:
     """
     Send a request to OpenAI and get the response text.
@@ -158,16 +242,39 @@ def send_OpenAI_request(prompt: str) -> str:
     Returns:
         str: The response text from OpenAI.
     """
-    logger.debug(f"Sending OpenAI request with system_prompt: {system_prompt} and prompt: {prompt}")
-    response = openAI_request(opeanai_api_key, system_prompt, prompt)
+    #logger.debug(f"Sending OpenAI request with system_prompt: {system_prompt} and prompt: {prompt}")
+    logger.debug(f"Sending OpenAI request")
+    response = openAI_request(openai_api_key, system_prompt, prompt)
     if response is None:
         logger.error("Failed to get a response from OpenAI")
         return None    
     # Extract the response from OpenAI
     response_text = response.choices[0].message.content
-    logger.debug(f"OpenAI response: {response}")
+    response_text = fix_LLM_response_typos(response_text)
+    #logger.debug(f"OpenAI response: {response}")
     logger.debug(f"OpenAI response text: {response_text}")
     return response_text
+
+def check_attempts_exceed_for_cur_layer(pipeline_data: dict) -> bool:
+    """
+    Check if the number of attempts executed within the current layer exceeds the allowed limit.
+
+    Args:
+        pipeline_data (dict): The current pipeline data.
+
+    Returns:
+        bool: True if the number of attempts exceeds the allowed limit, otherwise False.
+    """
+    current_hidden_layers_ct = pipeline_data.get('current_hidden_layers_ct')
+    attempts_count = 0
+
+    if pipeline_data.get('hidden_layers_configs') is not None:
+        for layer in pipeline_data['hidden_layers_configs']:
+            if layer.get('hidden_layers_ct') == current_hidden_layers_ct:
+                attempts_count = len(layer.get('configurations', []))
+                break
+
+    return attempts_count > ATTEMPTS_ALLOWED_PER_LAYER
 
 def check_layers_increase(response: str) -> int:
     """
@@ -232,10 +339,11 @@ def iterate_LLM_cycle(prompt: str, pipeline_data: dict) -> dict:
     response_text = send_OpenAI_request(prompt)            
     new_layers = check_layers_increase(response_text)
     if new_layers is None:
-        for i in range(3):
+        for i in range(3):            
             prompt = validate_new_model_config_JSON(response_text, pipeline_data, 0)
             if prompt is None:
                 logger.debug(f"Successfully validated the JSON configuration, JSON: {response_text}")
+
                 pipeline_data['current_configuration'] = response_text
                 return pipeline_data
             else:
@@ -260,7 +368,7 @@ def save_model_configuration_and_publish_message(pipeline_data: dict) -> bool:
     Returns:
         bool: True if the configuration is saved and the message is published, otherwise False.
     """
-    response_json = load_valid_json(pipeline_data['current_configuration'])
+    response_json = adpipsvcfuncs.load_valid_json(pipeline_data['current_configuration'])
 
     if response_json is None:
         logger.error(f"Failed to load a valid JSON from OpenAI response. Response JSON is {response_json}")
@@ -306,13 +414,23 @@ def adatptive_pipeline_generate_config(event, context):
         return "Skipping message processing due to a message not intended to start a procedure"
     
     pipeline_id = pubsub_message['pipeline_id']
-
-    pipeline_data = load_current_pipeline_data(pipeline_id)
+    pipeline_data = load_current_pipeline_data(pipeline_id)    
     if pipeline_data is None:
         logger.error(f"Failed to load the pipeline data for pipeline_id: {pipeline_id}")
         return f"Failed to load the pipeline data for pipeline_id: {pipeline_id}"
     else:
-        logger.debug(f"Loaded pipeline data for pipeline_id: {pipeline_id}. Data: {pipeline_data}")
+        #logger.debug(f"Loaded pipeline data for pipeline_id: {pipeline_id}. Data: {pipeline_data}")
+        logger.debug(f"Loaded pipeline data for pipeline_id: {pipeline_id}")
+
+    # Check if the number of attempts exceeds the allowed limit for the current layer
+    if check_attempts_exceed_for_cur_layer(pipeline_data):
+        new_layers = pipeline_data['current_hidden_layers_ct'] + 1
+        pipeline_data = new_layers_configuration(pipeline_data, new_layers)
+        prompt = generate_LLM_prompt(pipeline_data, new_layers)
+        logger.debug(f"New hidden layers number request detected: {new_layers}")   
+        pipeline_data = iterate_LLM_cycle(prompt, pipeline_data)
+        logger.error(f"Number of attempts exceeded the allowed limit for the current layer, switching to the next iteration with {new_layers} hidden layers")        
+
 
     prompt = generate_LLM_prompt(pipeline_data, 0)
     pipeline_data = iterate_LLM_cycle(prompt, pipeline_data)
@@ -327,4 +445,22 @@ def adatptive_pipeline_generate_config(event, context):
 
     logger.debug(f"OpenAI response text: {response_text}")
     logger.debug(f"TEST PIPELINE FINALIZATION SUCCESS. OpenAI response text: {response_text}")
-    return f"TEST PIPELINE FINALIZATION SUCCESS. OpenAI response text: {response_text}"        
+    return f"TEST PIPELINE FINALIZATION SUCCESS. OpenAI response text: {response_text}" 
+
+
+if __name__ == "__main__":    
+
+    # Simulated Pub/Sub message
+    test_event = {
+        "data": base64.b64encode(json.dumps({
+            "pipeline_id": "1234",
+            "status": MSG_TYPE.START_MODEL_CONFIGURATION.value
+        }).encode()).decode()
+    }
+
+    # Simulated context (not used in this script, but passed by Cloud Functions)
+    test_context = {}
+
+    # Call the function as if it were triggered in the cloud
+    result = adatptive_pipeline_generate_config(test_event, test_context)
+    print(f"Function result: {result}")

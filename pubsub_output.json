@@ -1,0 +1,3 @@
+{"topic": "adaptive-pipeline-workflow-topic", "message": {"pipeline_id": "fEfinMHrYfgd1WPPR4ac", "status": 5, 
+"current_configuration": 
+"{\"cfg\":{\"lm\":0.01,\"bs\":64,\"ep\":50,\"lr\":0.001,\"lf\":0.5,\"lp\":5,\"md\":0.001,\"cd\":2,\"mlr\":0.00001,\"esp\":10},\"l\":[{\"lt\":\"d\",\"u\":128,\"kr\":\"2\",\"br\":null,\"krl\":0.01,\"brl\":null,\"ki\":\"g\",\"bi\":\"z\",\"dr\":0.2,\"bn\":true,\"a\":\"r\",\"r\":false},{\"lt\":\"d\",\"u\":256,\"kr\":\"1\",\"br\":\"1\",\"krl\":0.001,\"brl\":0.001,\"ki\":\"h\",\"bi\":\"g\",\"dr\":0.3,\"bn\":true,\"a\":\"l\",\"r\":true}]}"}}
